@@ -1,13 +1,12 @@
 import { BskyAgent } from '@atproto/api';
 import * as dotenv from 'dotenv';
+import yahooFinance from 'yahoo-finance2';
 import * as process from 'process';
 import { CronJob } from 'cron';
-import yahooFinance from 'yahoo-finance2';
+import dayjs from 'dayjs';
 
 dotenv.config();
 
-const API_URL = 'https://api.exchangeratesapi.io/latest'; // Substitua pelo seu URL de API de câmbio
-const API_KEY = process.env.EXCHANGE_RATE_API_KEY; // Sua chave de API aqui
 const BLUESKY_USERNAME = process.env.BLUESKY_USERNAME;
 const BLUESKY_PASSWORD = process.env.BLUESKY_PASSWORD;
 
@@ -20,15 +19,32 @@ async function fetchExchangeRates() {
   try {
     // Busca as taxas de câmbio do Yahoo Finance
     const usdToCny = await yahooFinance.quote('USDCNY=X');
+    
+    // A taxa de câmbio está no campo `regularMarketPrice`
+    console.log('Taxa de câmbio USD/CNY:', usdToCny.regularMarketPrice);
+    
     return {
-      USD: 1, // USD é sempre 1, pois estamos comparando com CNY
-      CNY: usdToCny.regularMarketPrice,
+      USD: 1, // USD é sempre 1, já que estamos comparando com CNY
+      CNY: usdToCny.regularMarketPrice, // Taxa de câmbio atual de CNY
+      previousClose: usdToCny.regularMarketPreviousClose // Preço de fechamento anterior
     };
   } catch (error) {
     console.error('Erro ao buscar as taxas de câmbio no Yahoo Finance:', error);
     throw error;
   }
 }
+
+function calculateMetrics(currentRate: number, previousRate: number) {
+  // Valorização Percentual
+  const growthPercentage = ((currentRate - previousRate) / previousRate) * 100;
+  
+  return {
+    growthPercentage: growthPercentage.toFixed(2),
+    currentRate,
+    previousRate
+  };
+}
+
 async function postToBluesky(message: string) {
   try {
     await agent.login({
@@ -48,30 +64,36 @@ async function postToBluesky(message: string) {
 async function main() {
   console.log('Executando a função principal...', new Date());
   try {
+    // Busca as taxas de câmbio atuais e anteriores
     const rates = await fetchExchangeRates();
-    const usdRate = rates?.USD;
-    const cnyRate = rates?.CNY!;
+    const usdRate = rates.USD;
+    const cnyRate = rates.CNY!;
+    const previousCloseRate = rates.previousClose!;
 
-    console.log({ usdRate, cnyRate });
+    // Calcula as métricas
+    const { growthPercentage } = calculateMetrics(cnyRate, previousCloseRate);
 
-    const growthPercentage = ((cnyRate - usdRate) / usdRate) * 100;
-
+    // Monta a mensagem de acordo com as métricas
     const message =
-      growthPercentage > 0
-        ? `
-      🚀 O Yuan teve uma valorização impressionante de ${growthPercentage.toFixed(2)}% 
-         em comparação ao dólar americano! 💹📈
+      parseFloat(growthPercentage) > 0
+      ? `
+      🚀 O Yuan teve uma valorização impressionante de ${growthPercentage}% 
+      em comparação ao fechamento anterior! 💹📈
 
-      📊 Fórmula: (CNY - USD) / USD * 100
-      🇨🇳 CNY: ${cnyRate}
-      🇺🇸 USD: ${usdRate}
+      🇨🇳 CNY Atual: ${cnyRate}
+      🇺🇸 Fechamento Anterior (USD/CNY): ${previousCloseRate}
 
-      📅 ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit',
-      })}
+      📅 ${dayjs().format('DD/MM/YYYY')} às ${dayjs().format('HH:mm')}
       `
-        : `📉 O Yuan caiu ${Math.abs(growthPercentage).toFixed(2)}% em relação ao dólar!`;
+      : `
+      📉 O Yuan teve uma desvalorização de ${growthPercentage}% 
+      em comparação ao fechamento anterior. 📉
+
+      🇨🇳 CNY Atual: ${cnyRate}
+      🇺🇸 Fechamento Anterior (USD/CNY): ${previousCloseRate}
+
+      📅 ${dayjs().format('DD/MM/YYYY')} às ${dayjs().format('HH:mm')}
+      `;
 
     // Publica o resultado
     console.log({ message });
@@ -83,7 +105,8 @@ async function main() {
 }
 
 // Define a execução em um job cron
-const scheduleExpression = '*/5 * * * *'; // Executa a cada 3 minutos
+const scheduleExpression = '*/5 * * * *'; // Executa a cada 5 minutos
 const job = new CronJob(scheduleExpression, main);
 
+main();
 job.start();
