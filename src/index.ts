@@ -104,8 +104,9 @@ async function main() {
   console.log('Função principal concluída.', new Date());
 }
 
-// Define a execução em um job cron
-const scheduleExpression = '0 * * * *'; // Executa de hora em hora
-const job = new CronJob(scheduleExpression, main);
+main();
+// // Define a execução em um job cron
+// const scheduleExpression = '0 * * * *'; // Executa de hora em hora
+// const job = new CronJob(scheduleExpression, main);
 
-job.start();
+// job.start();
