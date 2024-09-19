@@ -79,8 +79,4 @@ async function main() {
   console.log('Função principal concluída.', new Date());
 }
 
-// Define a execução em um job cron
-const scheduleExpression = '* * * * *'; // Executa a cada minuto
-const job = new CronJob(scheduleExpression, main);
-
-job.start();
+main();
