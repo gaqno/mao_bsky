@@ -2,6 +2,7 @@ import { BskyAgent } from '@atproto/api';
 import * as dotenv from 'dotenv';
 import axios from 'axios';
 import * as process from 'process';
+import { CronJob } from 'cron';
 
 dotenv.config();
 
@@ -78,4 +79,8 @@ async function main() {
   console.log('Função principal concluída.', new Date());
 }
 
-main();
+// Define a execução em um job cron
+const scheduleExpression = '0 */12 * * *'; // Executa a cada 12 horas
+const job = new CronJob(scheduleExpression, main);
+
+job.start();
