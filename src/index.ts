@@ -108,5 +108,4 @@ async function main() {
 const scheduleExpression = '*/5 * * * *'; // Executa a cada 5 minutos
 const job = new CronJob(scheduleExpression, main);
 
-main();
 job.start();
