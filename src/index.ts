@@ -60,14 +60,16 @@ async function main() {
       growthPercentage > 0
         ? `
       🚀 O Yuan teve uma valorização impressionante de ${growthPercentage.toFixed(2)}% 
-      em comparação ao dólar americano! 💹📈
+         em comparação ao dólar americano! 💹📈
 
       📊 Fórmula: (CNY - USD) / USD * 100
       🇨🇳 CNY: ${cnyRate}
       🇺🇸 USD: ${usdRate}
 
-      📅 ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString()}
-      #YahooFinance #CNY #USD #ExchangeRate
+      📅 ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+      })}
       `
         : `📉 O Yuan caiu ${Math.abs(growthPercentage).toFixed(2)}% em relação ao dólar!`;
 
