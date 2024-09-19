@@ -1,8 +1,8 @@
 import { BskyAgent } from '@atproto/api';
 import * as dotenv from 'dotenv';
-import axios from 'axios';
 import * as process from 'process';
 import { CronJob } from 'cron';
+import yahooFinance from 'yahoo-finance2';
 
 dotenv.config();
 
@@ -18,19 +18,17 @@ const agent = new BskyAgent({
 
 async function fetchExchangeRates() {
   try {
-    const response = await axios.get(API_URL, {
-      params: {
-        access_key: API_KEY,
-        symbols: 'USD,CNY', // Solicita apenas USD e CNY
-      },
-    });
-    return response.data.rates;
+    // Busca as taxas de câmbio do Yahoo Finance
+    const usdToCny = await yahooFinance.quote('USDCNY=X');
+    return {
+      USD: 1, // USD é sempre 1, pois estamos comparando com CNY
+      CNY: usdToCny.regularMarketPrice,
+    };
   } catch (error) {
-    console.error('Erro ao buscar as taxas de câmbio:', error);
+    console.error('Erro ao buscar as taxas de câmbio no Yahoo Finance:', error);
     throw error;
   }
 }
-
 async function postToBluesky(message: string) {
   try {
     await agent.login({
@@ -52,7 +50,9 @@ async function main() {
   try {
     const rates = await fetchExchangeRates();
     const usdRate = rates?.USD;
-    const cnyRate = rates?.CNY;
+    const cnyRate = rates?.CNY!;
+
+    console.log({ usdRate, cnyRate });
 
     const growthPercentage = ((cnyRate - usdRate) / usdRate) * 100;
 
@@ -67,6 +67,7 @@ async function main() {
       🇺🇸 USD: ${usdRate}
 
       📅 ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString()}
+      #YahooFinance #CNY #USD #ExchangeRate
       `
         : `📉 O Yuan caiu ${Math.abs(growthPercentage).toFixed(2)}% em relação ao dólar!`;
 
@@ -80,7 +81,7 @@ async function main() {
 }
 
 // Define a execução em um job cron
-const scheduleExpression = '0 */12 * * *'; // Executa a cada 12 horas
+const scheduleExpression = '*/5 * * * *'; // Executa a cada 3 minutos
 const job = new CronJob(scheduleExpression, main);
 
 job.start();
