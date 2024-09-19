@@ -105,7 +105,7 @@ async function main() {
 }
 
 // Define a execução em um job cron
-const scheduleExpression = '*/5 * * * *'; // Executa a cada 5 minutos
+const scheduleExpression = '0 * * * *'; // Executa de hora em hora
 const job = new CronJob(scheduleExpression, main);
 
 job.start();
