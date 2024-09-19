@@ -2,7 +2,6 @@ import { BskyAgent } from '@atproto/api';
 import * as dotenv from 'dotenv';
 import axios from 'axios';
 import * as process from 'process';
-import { CronJob } from 'cron';
 
 dotenv.config();
 
